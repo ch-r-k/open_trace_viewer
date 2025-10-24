@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "debug streamlit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/workspaces/open_trace_viewer/.venv/bin/streamlit",
+            "args": [
+                "run",
+                "${workspaceFolder}/src/app.py",
+                "--server.runOnSave=false"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}
