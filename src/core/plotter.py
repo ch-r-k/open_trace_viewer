@@ -1,5 +1,6 @@
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 class TimeSeriesPlotter:
@@ -11,8 +12,14 @@ class TimeSeriesPlotter:
         self.origin = pd.Timestamp("2025-10-11 09:00:00")
         self.data_tasks = data_tasks
         self.data_messages = data_messages
-        self.fig = None
         self.df_tasks = None
+
+        self.fig = make_subplots(
+            rows=2, cols=1,
+            shared_xaxes=True,
+            subplot_titles=("Metric A", "Project Timeline"),
+            specs=[[{"type": "xy"}], [{"type": "xy"}]]  # xy needed for Timeline
+        )
 
     def set_tasks(self, data_tasks):
         """Set or update the task data."""
@@ -37,15 +44,20 @@ class TimeSeriesPlotter:
         if self.data_tasks is None:
             raise ValueError("No task data set. Use set_tasks() first.")
         
-        self.df_tasks = self.create_task_dataframe()
-        self.fig = px.timeline(
-            self.df_tasks, 
-            x_start="Start", 
-            x_end="Finish", 
-            y="Task", 
-            color="Task"
-        )
-        self.fig.update_yaxes(autorange="reversed")  # Task1 at the top
+        self.df_tasks = self.create_task_dataframe()        
+        fig = px.timeline(
+                self.df_tasks, 
+                x_start="Start", 
+                x_end="Finish", 
+                y="Task", 
+                color="Task"
+            )
+        
+        for trace in fig.data:
+            self.fig.add_trace(trace, row=1, col=1)
+
+        self.fig.update_xaxes(type='date')        
+        #self.fig.update_yaxes(autorange="reversed")  # Task1 at the top
         self.fig.update_xaxes(tickformat="%S.%L", title="Time (s)")
         self.fig.update_layout(title="Task Activity with Messages")
 
@@ -59,8 +71,7 @@ class TimeSeriesPlotter:
             if task not in unique_tasks:
                 unique_tasks.append(task)
 
-        num_unique = len(unique_tasks)
-        task_map = {task: num_unique - 1 - i for i, task in enumerate(unique_tasks)}
+        task_map = {task: i for i, task in enumerate(unique_tasks)}
         return task_map
 
     def add_messages_to_figure(self):
