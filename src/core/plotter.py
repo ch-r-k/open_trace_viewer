@@ -1,112 +1,136 @@
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 class TimeSeriesPlotter:
     def __init__(self, data_tasks=None, data_messages=None):
-        """
-        Initialize the plotter with optional tasks and messages.
-        """
         print("TimeSeriesPlotter initialized")
         self.origin = pd.Timestamp("2025-10-11 09:00:00")
-        self.data_tasks = data_tasks
-        self.data_messages = data_messages
+        self.data_tasks = data_tasks or []
+        self.data_messages = data_messages or []
         self.df_tasks = None
 
         self.fig = make_subplots(
             rows=2, cols=1,
             shared_xaxes=True,
             subplot_titles=("Metric A", "Project Timeline"),
-            specs=[[{"type": "xy"}], [{"type": "xy"}]]  # xy needed for Timeline
+            specs=[[{"type": "xy"}], [{"type": "xy"}]]
         )
 
     def set_tasks(self, data_tasks):
-        """Set or update the task data."""
         self.data_tasks = data_tasks
 
     def set_messages(self, data_messages):
-        """Set or update the message data."""
         self.data_messages = data_messages
 
     def create_task_dataframe(self):
-        """Convert raw task data into a DataFrame with proper datetime columns."""
-        if self.data_tasks is None:
-            raise ValueError("No task data set. Use set_tasks() or provide data_tasks at init.")
-        
-        df_tasks = pd.DataFrame(self.data_tasks)
-        df_tasks["Start"] = self.origin + pd.to_timedelta(df_tasks["Start"], unit="ms")
-        df_tasks["Finish"] = self.origin + pd.to_timedelta(df_tasks["Finish"], unit="ms")
-        return df_tasks
+        """Convert raw task data into DataFrame with Start/Finish in seconds."""
+        if not self.data_tasks:
+            raise ValueError("No task data set.")
+        df = pd.DataFrame(self.data_tasks)
+        # Keep original ms columns if present, compute seconds
+        df["Start_s"] = df["Start"] / 1000.0
+        df["Finish_s"] = df["Finish"] / 1000.0
+        df["Duration_s"] = df["Finish_s"] - df["Start_s"]
+        return df
 
     def create_timeline_figure(self):
-        """Create and store the base timeline figure."""
-        if self.data_tasks is None:
-            raise ValueError("No task data set. Use set_tasks() first.")
-        
-        self.df_tasks = self.create_task_dataframe()        
-        fig = px.timeline(
-                self.df_tasks, 
-                x_start="Start", 
-                x_end="Finish", 
-                y="Task", 
-                color="Task"
+        if not self.data_tasks:
+            raise ValueError("No task data set.")
+        self.df_tasks = self.create_task_dataframe()
+        df = self.df_tasks
+
+        # Determine task order (preserve first-appearance order)
+        unique_tasks = list(dict.fromkeys(df["Task"].tolist()))
+
+        # Add one horizontal bar per task-row (use overlay and one legend entry per task)
+        added_tasks = set()
+        for _, row in df.iterrows():
+            show_legend = False
+            if row["Task"] not in added_tasks:
+                show_legend = True
+                added_tasks.add(row["Task"])
+
+            self.fig.add_trace(
+                go.Bar(
+                    x=[row["Duration_s"]],
+                    y=[row["Task"]],
+                    base=[row["Start_s"]],
+                    orientation="h",
+                    name=row["Task"],
+                    showlegend=show_legend,
+                    hovertemplate=(
+                        "%{y}<br>"
+                        "start: %{base:.3f}s<br>"
+                        "finish: %{x + base:.3f}s<br>"
+                        "duration: %{x:.3f}s<extra></extra>"
+                    )
+                ),
+                row=2, col=1
             )
-        
-        for trace in fig.data:
-            self.fig.add_trace(trace, row=1, col=1)
 
-        self.fig.update_xaxes(type='date')        
-        #self.fig.update_yaxes(autorange="reversed")  # Task1 at the top
-        self.fig.update_xaxes(tickformat="%S.%L", title="Time (s)")
-        self.fig.update_layout(title="Task Activity with Messages")
+        # Force y-category order so annotations align predictably
+        self.fig.update_yaxes(
+            title="Tasks",
+            categoryorder="array",
+            categoryarray=unique_tasks,
+            row=2, col=1
+        )
 
-    def map_tasks_to_y_positions(self):
-        """Map each unique task name to a y-axis position for the timeline."""
-        if self.df_tasks is None:
-            raise ValueError("Timeline must be created first.")
-        
-        unique_tasks = []
-        for task in self.df_tasks["Task"]:
-            if task not in unique_tasks:
-                unique_tasks.append(task)
+        # Numeric x-axis (seconds)
+        self.fig.update_xaxes(
+            title="Time (s)",
+            type="linear",
+            row=2, col=1
+        )
 
-        task_map = {task: i for i, task in enumerate(unique_tasks)}
-        return task_map
+        # Layout tweaks
+        self.fig.update_layout(
+            barmode="overlay",
+            title="Task Activity with Messages",
+            height=600,
+            margin=dict(t=60, l=120)
+        )
 
     def add_messages_to_figure(self):
-        """Add arrow annotations representing messages between tasks."""
+        """Add arrow annotations; use category labels for y/ay so arrows land on correct rows."""
         if self.fig is None:
             raise ValueError("Figure not created. Run create_timeline_figure() first.")
+        if not self.data_messages:
+            return
 
-        if self.data_messages is None:
-            return  # Nothing to add
-
-        task_map = self.map_tasks_to_y_positions()
+        tasks_in_plot = list(dict.fromkeys(self.df_tasks["Task"].tolist()))
 
         for msg in self.data_messages:
-            y_from = task_map[msg["From"]]
-            y_to = task_map[msg["To"]]
-            ts = self.origin + pd.to_timedelta(msg["Timestamp"], unit="ms")
+            if msg["From"] not in tasks_in_plot or msg["To"] not in tasks_in_plot:
+                continue
 
+            ts = msg["Timestamp"] / 1000.0  # ms → s
+            y_from = msg["From"]
+            y_to = msg["To"]
+
+            # For subplot row=2, col=1 → use "x2" and "y2"
             self.fig.add_annotation(
                 x=ts,
                 y=y_to,
                 ax=ts,
                 ay=y_from,
-                xref="x", yref="y",
-                axref="x", ayref="y",
+                xref="x2",
+                yref="y2",
+                axref="x2",
+                ayref="y2",
                 showarrow=True,
                 arrowhead=3,
                 arrowsize=1,
                 arrowwidth=2,
                 arrowcolor="blue",
-                text=msg["Text"],
-                standoff=5,
+                text=msg.get("Text", ""),
+                standoff=0,
             )
 
+
     def plot(self):
-        """Convenience method to build and show the full plot."""
+        """Build and return the figure."""
         self.create_timeline_figure()
         self.add_messages_to_figure()
         return self.fig
