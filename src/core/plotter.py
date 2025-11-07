@@ -99,7 +99,10 @@ class TimeSeriesPlotter:
             barmode="overlay",
             title="Task Activity with Messages",
             height=600,
-            margin=dict(t=60, l=120)
+            margin=dict(t=60, l=120),
+            dragmode="zoom",        # Allow only zoom interactions
+            yaxis_fixedrange=True,  # Lock y-axis for first subplot
+            yaxis2_fixedrange=True  # Lock y-axis for second subplot
         )
 
     def add_messages_to_figure(self):
