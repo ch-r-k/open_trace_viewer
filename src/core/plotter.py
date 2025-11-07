@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import plotly.express as px
 
 class TimeSeriesPlotter:
     def __init__(self, data_tasks=None, data_messages=None):
@@ -43,6 +44,12 @@ class TimeSeriesPlotter:
         # Determine task order (preserve first-appearance order)
         unique_tasks = list(dict.fromkeys(df["Task"].tolist()))
 
+        # Create a color map so each task always has the same color
+        palette = px.colors.qualitative.Plotly  # or use .D3, .Bold, etc.
+        task_color_map = {
+            task: palette[i % len(palette)] for i, task in enumerate(unique_tasks)
+        }
+
         # Add one horizontal bar per task-row (use overlay and one legend entry per task)
         added_tasks = set()
         for _, row in df.iterrows():
@@ -50,6 +57,8 @@ class TimeSeriesPlotter:
             if row["Task"] not in added_tasks:
                 show_legend = True
                 added_tasks.add(row["Task"])
+
+            color = task_color_map[row["Task"]]
 
             self.fig.add_trace(
                 go.Bar(
@@ -59,6 +68,7 @@ class TimeSeriesPlotter:
                     orientation="h",
                     name=row["Task"],
                     showlegend=show_legend,
+                    marker_color=color,
                     hovertemplate=(
                         "%{y}<br>"
                         "start: %{base:.3f}s<br>"
