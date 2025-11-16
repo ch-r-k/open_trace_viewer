@@ -59,7 +59,7 @@ class TimelinePlot:
         ayref = yref
 
         for msg in messages:
-            ts = msg["Timestamp"] / 1000.0
+            ts = msg["Timestamp"]
             y_from = msg["From"]
             y_to = msg["To"]
 

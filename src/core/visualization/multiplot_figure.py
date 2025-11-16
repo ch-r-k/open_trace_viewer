@@ -1,9 +1,10 @@
-# core/visualization/multiplot_figure.py
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
+
 class MultiPlotFigure:
     """Builds a vertical stack of subplots and places traces/annotations in correct rows."""
+
     def __init__(self, shared_xaxes=True, title="Time Series Overview"):
         self.title = title
         self.shared_xaxes = shared_xaxes
@@ -50,40 +51,76 @@ class MultiPlotFigure:
                 df = reg["data"]
                 x = df[reg["x_col"]]
                 y = df[reg["y_col"]]
-                if reg["plot_type"] in ("line", "area"):
-                    fig.add_trace(
-                        go.Scatter(x=x, y=y, mode="lines", name=reg["title"], fill="tozeroy" if reg["plot_type"] == "area" else None),
-                        row=idx, col=1
-                    )
-                elif reg["plot_type"] == "scatter":
-                    fig.add_trace(go.Scatter(x=x, y=y, mode="markers", name=reg["title"]), row=idx, col=1)
-                elif reg["plot_type"] == "bar":
-                    fig.add_trace(go.Bar(x=x, y=y, name=reg["title"]), row=idx, col=1)
-                else:
-                    # fallback to line
-                    fig.add_trace(go.Scatter(x=x, y=y, mode="lines", name=reg["title"]), row=idx, col=1)
+                ptype = reg["plot_type"]
 
-                # simple y-axis title
+                # Default hover text to show state if available
+                hover_text = df.get("State") if "State" in df.columns else y
+
+                if ptype == "area":
+                    trace = go.Scatter(
+                        x=x,
+                        y=y,
+                        mode="lines",
+                        name=reg["title"],
+                        fill="tozeroy"
+                    )
+                elif ptype == "step":
+                    # Step-style line using categorical y-axis
+                    trace = go.Scatter(
+                        x=x,
+                        y=df["State"],  # use actual state names for y
+                        mode="lines+markers",
+                        name=reg["title"],
+                        line=dict(shape="hv", width=2),
+                        hoverinfo="x+y+name"
+                    )
+
+                    # Force y-axis to be categorical with all states in order
+                    fig.update_yaxes(
+                        categoryorder="array",
+                        categoryarray=list(df["State"].unique()),
+                        title_text=reg["title"],
+                        row=idx,
+                        col=1
+                    )
+                elif ptype == "scatter":
+                    trace = go.Scatter(
+                        x=x,
+                        y=y,
+                        mode="markers",
+                        name=reg["title"]
+                    )
+                elif ptype == "bar":
+                    trace = go.Bar(x=x, y=y, name=reg["title"])
+                else:
+                    # Fallback to simple line
+                    trace = go.Scatter(
+                        x=x,
+                        y=y,
+                        mode="lines",
+                        name=reg["title"]
+                    )
+
+                fig.add_trace(trace, row=idx, col=1)
+
+                # Simple y-axis title
                 fig.update_yaxes(title_text=reg["title"], row=idx, col=1)
 
             elif reg["kind"] == "timeline":
-                # add all traces (they were created with generic axis references)
+                # Add all traces (they were created with generic axis references)
                 for t in reg["traces"]:
                     fig.add_trace(t, row=idx, col=1)
 
-                # timeline-specific layout
-                # force categorical order for y if possible
-                # leave y-axis title to "Tasks"
+                # Timeline-specific layout
                 fig.update_yaxes(title_text="Tasks", row=idx, col=1)
                 fig.update_xaxes(title_text="Time (s)", row=idx, col=1)
 
-                # attach annotations — they already have xref/yref like "xN"/"yN" computed with timeline row
+                # Attach annotations if any
                 if reg.get("annotations"):
-                    # append to existing annotations if any
                     existing = list(fig.layout.annotations) if fig.layout.annotations else []
                     fig.update_layout(annotations=existing + reg["annotations"])
 
-        # global layout
+        # Global layout
         fig.update_layout(
             title=self.title,
             height=300 * n_rows,
@@ -92,4 +129,5 @@ class MultiPlotFigure:
             dragmode="zoom",
             yaxis_fixedrange=True
         )
+
         return fig

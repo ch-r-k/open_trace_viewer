@@ -16,8 +16,8 @@ class TaskData:
         for col in ("Start", "Finish", "Task"):
             if col not in df.columns:
                 raise ValueError(f"Task records must include '{col}'")
-        df["Start_s"] = df["Start"] / 1000.0
-        df["Finish_s"] = df["Finish"] / 1000.0
+        df["Start_s"] = df["Start"]
+        df["Finish_s"] = df["Finish"]
         df["Duration_s"] = df["Finish_s"] - df["Start_s"]
         self.df = df
         return df
