@@ -4,19 +4,23 @@ import plotly.express as px
 from typing import List, Dict
 
 class TimelinePlot:
-    """Creates bar traces for task timeline and prepares annotations for messages."""
+    """Creates VERTICAL bar traces for task timeline and prepares annotations for messages."""
     def __init__(self):
         self.traces: List[go.Bar] = []
         self.annotations: List[Dict] = []
         self.task_color_map = {}
 
     def add_tasks(self, df_tasks):
+        # Preserve task order
         unique_tasks = list(dict.fromkeys(df_tasks["Task"].tolist()))
+
         palette = px.colors.qualitative.Plotly
         self.task_color_map = {t: palette[i % len(palette)] for i, t in enumerate(unique_tasks)}
 
-        # Create one bar trace per row (we still add them as separate traces so they
-        # are drawn in overlay mode and can have separate hover info)
+        # Produce VERTICAL bars:
+        #   x = task (category)
+        #   y = duration
+        #   base = start time  ← used to shift the bar up
         added_tasks = set()
         for _, row in df_tasks.iterrows():
             task = row["Task"]
@@ -26,52 +30,52 @@ class TimelinePlot:
                 added_tasks.add(task)
 
             trace = go.Bar(
-                x=[row["Duration_s"]],
-                y=[task],
-                base=[row["Start_s"]],
-                orientation="h",
+                x=[task],                  # categorical axis
+                y=[row["Duration_s"]],     # bar height
+                base=[row["Start_s"]],     # start time on Y-axis
+                orientation="v",
                 name=task,
                 marker_color=color,
                 showlegend=showlegend,
                 hovertemplate=(
-                    "%{y}<br>"
+                    "%{x}<br>"
                     "start: %{base:.3f}s<br>"
-                    "finish: %{x + base:.3f}s<br>"
-                    "duration: %{x:.3f}s<extra></extra>"
+                    "finish: %{y + base:.3f}s<br>"
+                    "duration: %{y:.3f}s<extra></extra>"
                 )
             )
             self.traces.append(trace)
 
         return unique_tasks
 
-    def add_messages(self, messages: List[Dict], timeline_row_idx: int):
+    def add_messages(self, messages: List[Dict], timeline_col_idx: int):
         """
-        Prepare annotations for messages. We don't attach annotations to a figure yet,
-        but we compute annotation dicts using correct axis refs for the timeline row.
+        Prepare annotations for messages, swapping x/y roles for vertical timeline.
         """
-        # helper to produce axis ref string like "x" or "x2"
-        def axis_ref(axis: str, row_idx: int) -> str:
-            return axis if row_idx == 1 else f"{axis}{row_idx}"
 
-        xref = axis_ref("x", timeline_row_idx)
-        yref = axis_ref("y", timeline_row_idx)
-        axref = xref
-        ayref = yref
+        def axis_ref(axis: str, col_idx: int) -> str:
+            return axis if col_idx == 1 else f"{axis}{col_idx}"
 
+        xref = axis_ref("x", timeline_col_idx)
+        yref = axis_ref("y", timeline_col_idx)
+
+        # swapped axis logic:
+        #   - x = task name (category)
+        #   - y = timestamp (seconds)
         for msg in messages:
             ts = msg["Timestamp"]
-            y_from = msg["From"]
-            y_to = msg["To"]
+            x_from = msg["From"]   # category on X axis
+            x_to = msg["To"]
 
             ann = dict(
-                x=ts,
-                y=y_to,
-                ax=ts,
-                ay=y_from,
+                x=x_to,
+                y=ts,
+                ax=x_from,
+                ay=ts,
                 xref=xref,
                 yref=yref,
-                axref=axref,
-                ayref=ayref,
+                axref=xref,
+                ayref=yref,
                 showarrow=True,
                 arrowhead=3,
                 arrowsize=1,

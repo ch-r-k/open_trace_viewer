@@ -3,15 +3,14 @@ import plotly.graph_objects as go
 
 
 class MultiPlotFigure:
-    """Builds a vertical stack of subplots and places traces/annotations in correct rows."""
+    """Builds a horizontal row of subplots and places traces/annotations in correct cols."""
 
-    def __init__(self, shared_xaxes=True, title="Time Series Overview"):
+    def __init__(self, shared_yaxes=True, title="Time Series Overview"):
         self.title = title
-        self.shared_xaxes = shared_xaxes
+        self.shared_yaxes = shared_yaxes
         self._registered = []  # list of dicts: {type, data, title}
 
     def add_metric_subplot(self, title: str, df, x_col="x", y_col="y", plot_type="line"):
-        """Register a metric subplot. df must contain x_col and y_col."""
         self._registered.append({
             "kind": "metric",
             "title": title,
@@ -22,7 +21,6 @@ class MultiPlotFigure:
         })
 
     def add_timeline_subplot(self, title: str, traces, annotations):
-        """Register the timeline subplot; traces should be list of go.Traces."""
         self._registered.append({
             "kind": "timeline",
             "title": title,
@@ -31,17 +29,17 @@ class MultiPlotFigure:
         })
 
     def build_figure(self):
-        n_rows = len(self._registered)
-        if n_rows == 0:
+        n_cols = len(self._registered)
+        if n_cols == 0:
             raise ValueError("No subplots registered.")
 
-        specs = [[{"type": "xy"}] for _ in range(n_rows)]
+        specs = [[{"type": "xy"} for _ in range(n_cols)]]
         titles = [r["title"] for r in self._registered]
 
         fig = make_subplots(
-            rows=n_rows,
-            cols=1,
-            shared_xaxes=self.shared_xaxes,
+            rows=1,
+            cols=n_cols,
+            shared_yaxes=self.shared_yaxes,
             subplot_titles=titles,
             specs=specs
         )
@@ -53,81 +51,62 @@ class MultiPlotFigure:
                 y = df[reg["y_col"]]
                 ptype = reg["plot_type"]
 
-                # Default hover text to show state if available
-                hover_text = df.get("State") if "State" in df.columns else y
-
+                # flip x/y to make vertical plots
                 if ptype == "area":
                     trace = go.Scatter(
-                        x=x,
-                        y=y,
+                        x=y,
+                        y=x,
                         mode="lines",
                         name=reg["title"],
                         fill="tozeroy"
                     )
+
                 elif ptype == "step":
-                    # Step-style line using categorical y-axis
                     trace = go.Scatter(
-                        x=x,
-                        y=df["State"],  # use actual state names for y
+                        x=df["State"],
+                        y=x,
                         mode="lines+markers",
                         name=reg["title"],
-                        line=dict(shape="hv", width=2),
-                        hoverinfo="x+y+name"
+                        line=dict(shape="vh", width=2),
                     )
-
-                    # Force y-axis to be categorical with all states in order
-                    fig.update_yaxes(
+                    fig.update_xaxes(
                         categoryorder="array",
                         categoryarray=list(df["State"].unique()),
-                        title_text=reg["title"],
-                        row=idx,
-                        col=1
+                        row=1, col=idx
                     )
+
                 elif ptype == "scatter":
-                    trace = go.Scatter(
-                        x=x,
-                        y=y,
-                        mode="markers",
-                        name=reg["title"]
-                    )
+                    trace = go.Scatter(x=y, y=x, mode="markers", name=reg["title"])
+
                 elif ptype == "bar":
-                    trace = go.Bar(x=x, y=y, name=reg["title"])
+                    trace = go.Bar(x=y, y=x, name=reg["title"], orientation="v")
+
                 else:
-                    # Fallback to simple line
-                    trace = go.Scatter(
-                        x=x,
-                        y=y,
-                        mode="lines",
-                        name=reg["title"]
-                    )
+                    trace = go.Scatter(x=y, y=x, mode="lines", name=reg["title"])
 
-                fig.add_trace(trace, row=idx, col=1)
-
-                # Simple y-axis title
-                fig.update_yaxes(title_text=reg["title"], row=idx, col=1)
+                fig.add_trace(trace, row=1, col=idx)
+                fig.update_xaxes(title_text=reg["y_col"], row=1, col=idx)
+                fig.update_yaxes(title_text=reg["x_col"], row=1, col=idx)
 
             elif reg["kind"] == "timeline":
-                # Add all traces (they were created with generic axis references)
                 for t in reg["traces"]:
-                    fig.add_trace(t, row=idx, col=1)
+                    fig.add_trace(t, row=1, col=idx)
 
-                # Timeline-specific layout
-                fig.update_yaxes(title_text="Tasks", row=idx, col=1)
-                fig.update_xaxes(title_text="Time (s)", row=idx, col=1)
+                fig.update_xaxes(title_text="Task", row=1, col=idx)
+                fig.update_yaxes(title_text="Time (s)", row=1, col=idx)
 
-                # Attach annotations if any
                 if reg.get("annotations"):
                     existing = list(fig.layout.annotations) if fig.layout.annotations else []
                     fig.update_layout(annotations=existing + reg["annotations"])
 
-        # Global layout
         fig.update_layout(
             title=self.title,
-            height=300 * n_rows,
-            margin=dict(t=80, l=120),
-            barmode="overlay",
+            width=420 * n_cols,
+            height=600,
+            margin=dict(t=80, l=60),
             dragmode="zoom",
-            yaxis_fixedrange=True
+            barmode="overlay"
         )
 
         return fig
+
