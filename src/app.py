@@ -3,7 +3,7 @@ import streamlit as st
 import json
 import pandas as pd
 from core.plotter import TimeSeriesPlotter
-from data.demo_data import default_tasks, default_messages
+from data.demo_data import default_tasks, default_messages, default_notes
 
 st.set_page_config(page_title="Task Timeline", layout="wide")
 st.title("📊 Interactive Task Timeline Viewer")
@@ -17,29 +17,27 @@ if uploaded_file:
         data_tasks = data.get("tasks", [])
         data_messages = data.get("messages", [])
         data_states = data.get("states", [])
+        data_notes = data.get("notes", [])
         st.sidebar.success(f"Loaded {len(data_tasks)} tasks and {len(data_states)} state groups.")
     except Exception as e:
         st.sidebar.error(f"Failed to read file: {e}")
         data_tasks, data_messages, data_states = [], [], []
 else:
     st.sidebar.info("Using demo data (upload JSON to replace).")
-    data_tasks, data_messages = default_tasks, default_messages
+    data_tasks = default_tasks
+    data_messages = default_messages
+    data_notes = default_notes
     data_states = []  # no states in demo
 
-# Optional demo metrics
-show_demo_metrics = st.sidebar.checkbox("Show demo metrics", value=True)
+
 
 # Build plot
 plotter = TimeSeriesPlotter(title="System Activity Timeline")
 
-if show_demo_metrics:
-    df_idle = pd.DataFrame({"x": [0, 5, 10, 15], "y": [20, 30, 15, 25]})
-    df_user = pd.DataFrame({"x": [0, 5, 10, 15], "y": [10, 25, 30, 20]})
-    plotter.add_metric("Idle Time (%)", df_idle, x_col="x", y_col="y", plot_type="area")
-    plotter.add_metric("User Load", df_user, x_col="x", y_col="y", plot_type="line")
 
 # Add tasks & messages
 plotter.add_tasks_and_messages(data_tasks, data_messages)
+plotter.add_notes(data_notes)
 
 # ============================
 # Add state step diagrams

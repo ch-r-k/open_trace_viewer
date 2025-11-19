@@ -20,6 +20,14 @@ class MultiPlotFigure:
             "plot_type": plot_type
         })
 
+    def add_notes_subplot(self, title: str, traces, annotations):
+        self._registered.append({
+            "kind": "notes",
+            "title": title,
+            "traces": traces,
+            "annotations": annotations
+        })
+
     def add_timeline_subplot(self, title: str, traces, annotations):
         self._registered.append({
             "kind": "timeline",
@@ -87,7 +95,10 @@ class MultiPlotFigure:
                 fig.add_trace(trace, row=1, col=idx)
                 fig.update_xaxes(title_text=reg["y_col"], row=1, col=idx)
                 fig.update_yaxes(title_text=reg["x_col"], row=1, col=idx)
-
+            elif reg["kind"] == "notes":
+                if reg.get("annotations"):
+                    existing = list(fig.layout.annotations) if fig.layout.annotations else []
+                    fig.update_layout(annotations=existing + reg["annotations"])
             elif reg["kind"] == "timeline":
                 for t in reg["traces"]:
                     fig.add_trace(t, row=1, col=idx)

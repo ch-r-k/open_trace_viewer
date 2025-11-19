@@ -936,3 +936,5 @@ default_messages = [
         "To": "input_checker"
     }
 ]
+
+default_notes = []
