@@ -94,7 +94,7 @@ class MultiPlotFigure:
 
                 fig.add_trace(trace, row=1, col=idx)
                 fig.update_xaxes(title_text=reg["y_col"], row=1, col=idx)
-                fig.update_yaxes(title_text=reg["x_col"], row=1, col=idx)
+                fig.update_yaxes(title_text=reg["x_col"],autorange="reversed", row=1, col=idx)
             elif reg["kind"] == "notes":
                 if reg.get("annotations"):
                     existing = list(fig.layout.annotations) if fig.layout.annotations else []
@@ -104,7 +104,7 @@ class MultiPlotFigure:
                     fig.add_trace(t, row=1, col=idx)
 
                 fig.update_xaxes(title_text="Task", row=1, col=idx)
-                fig.update_yaxes(title_text="Time (s)", row=1, col=idx)
+                fig.update_yaxes(title_text="Time (s)",autorange="reversed", row=1, col=idx)
 
                 if reg.get("annotations"):
                     existing = list(fig.layout.annotations) if fig.layout.annotations else []
