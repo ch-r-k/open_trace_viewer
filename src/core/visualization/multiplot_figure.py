@@ -43,8 +43,8 @@ class MultiPlotFigure:
             }
         )
 
-    def add_notes_subplot(self, title: str, traces: List[Any], annotations: List[Dict]) -> None:
-        self._registered.append({"kind": "notes", "title": title, "traces": traces, "annotations": annotations})
+    def add_notes_subplot(self, title: str, traces: List[Any], annotations: List[Dict], shapes: List[Dict] = None) -> None:
+        self._registered.append({"kind": "notes", "title": title, "traces": traces, "annotations": annotations, "shapes": shapes or []})
 
     def add_timeline_subplot(self, title: str, traces: List[Any], annotations: List[Dict]) -> None:
         self._registered.append({"kind": "timeline", "title": title, "traces": traces, "annotations": annotations})
@@ -91,6 +91,14 @@ class MultiPlotFigure:
                 if reg.get("annotations"):
                     existing = list(fig.layout.annotations) if fig.layout.annotations else []
                     fig.update_layout(annotations=existing + reg["annotations"])
+
+                if reg.get("shapes"):
+                    existing_shapes = list(fig.layout.shapes) if fig.layout.shapes else []
+                    fig.update_layout(shapes=existing_shapes + reg.get("shapes", []))
+
+                # Restrict the notes subplot x-axis to the [0, 2] range so
+                # notes are always displayed within a narrow horizontal band.
+                fig.update_xaxes(range=[0, 2], row=1, col=idx)
 
             elif reg["kind"] == "timeline":
                 for t in reg["traces"]:

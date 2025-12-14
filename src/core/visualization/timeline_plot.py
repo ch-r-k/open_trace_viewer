@@ -1,6 +1,7 @@
 """Utilities for building a task timeline (vertical bars + message arrows)."""
 
 from typing import Dict, List
+import textwrap
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -101,6 +102,12 @@ class TimelinePlot:
         xref = axis_ref("x", timeline_col_idx)
         yref = axis_ref("y", timeline_col_idx)
 
+        def wrap(text: str, width: int = 36) -> str:
+            # Wrap on word boundaries and use <br> for Plotly annotation line breaks
+            if not text:
+                return ""
+            return "<br>".join(textwrap.fill(text, width=width, break_long_words=False).splitlines())
+
         for msg in messages:
             ts = msg.get("Timestamp")
             x_from = msg.get("From")
@@ -123,7 +130,9 @@ class TimelinePlot:
                 arrowsize=1,
                 arrowwidth=2,
                 arrowcolor="blue",
-                text=msg.get("Text", ""),
+                text=wrap(msg.get("Text", "")),
+                align="left",
+                xanchor="left",
                 standoff=0,
             )
             self.annotations.append(ann)

@@ -31,7 +31,7 @@ class TimeSeriesPlotter:
         """Register a metric subplot backed by `df` (pandas DataFrame-like)."""
         self.figure_builder.add_metric_subplot(title=title, df=df, x_col=x_col, y_col=y_col, plot_type=plot_type)
 
-    def add_notes(self, notes: List[dict]) -> None:
+    def add_notes(self, notes: List[dict], search: str = None) -> None:
         """Add a notes column (annotation-only) to the figure.
 
         Notes are placed in a column after any already-registered subplots.
@@ -41,12 +41,13 @@ class TimeSeriesPlotter:
 
         notes_col_idx = len(self.figure_builder._registered) + 1
 
-        self.notes_plot.add_notes(notes, notes_col_idx)
+        self.notes_plot.add_notes(notes, notes_col_idx, search=search)
 
         self.figure_builder.add_notes_subplot(
             "Notes",
             traces=self.notes_plot.traces,
             annotations=self.notes_plot.annotations,
+            shapes=self.notes_plot.shapes,
         )
 
     def add_tasks_and_messages(self, data_tasks: List[dict], data_messages: List[dict]) -> None:

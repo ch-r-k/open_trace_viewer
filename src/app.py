@@ -79,9 +79,12 @@ def main() -> None:
     uploaded_file = st.sidebar.file_uploader("Upload JSON with 'tasks' and 'messages'", type=["json"])
     data = load_input_data(uploaded_file)
 
+    # Notes search input: highlight notes that contain this text
+    notes_search = st.sidebar.text_input("Search notes (highlights matches)", value="")
+
     plotter = build_plotter()
     plotter.add_tasks_and_messages(data["tasks"], data["messages"])
-    plotter.add_notes(data.get("notes", []))
+    plotter.add_notes(data.get("notes", []), search=notes_search if notes_search else None)
 
     add_state_groups_to_plotter(plotter, data.get("states", []))
 
