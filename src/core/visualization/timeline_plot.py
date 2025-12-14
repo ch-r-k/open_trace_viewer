@@ -35,19 +35,53 @@ class TimelinePlot:
             if showlegend:
                 added_tasks.add(task)
 
+            # Robustly compute start, duration and finish values. The input
+            # DataFrame may provide either Duration_s, or Start_s + Finish_s.
+            start = None
+            try:
+                start = float(row["Start_s"])
+            except Exception:
+                start = None
+
+            duration = None
+            try:
+                duration = float(row["Duration_s"])
+            except Exception:
+                duration = None
+
+            finish = None
+            try:
+                finish = float(row["Finish_s"])
+            except Exception:
+                finish = None
+
+            if duration is None and finish is not None and start is not None:
+                duration = finish - start
+            elif finish is None and duration is not None and start is not None:
+                finish = start + duration
+
+            # If we still don't have a start or duration value, skip this row
+            if start is None or duration is None:
+                continue
+
             trace = go.Bar(
                 x=[task],
-                y=[row["Duration_s"]],
-                base=[row["Start_s"]],
+                # y is the bar height (duration); base is the start time
+                y=[duration],
+                base=[start],
                 orientation="v",
                 name=task,
                 marker_color=color,
                 showlegend=showlegend,
+                # Provide finish and duration via customdata so hovertemplate
+                # doesn't try to perform arithmetic (Plotly hovertemplate
+                # expressions don't support adding base+y).
+                customdata=[[finish, duration]],
                 hovertemplate=(
                     "%{x}<br>"
                     "start: %{base:.3f}s<br>"
-                    "finish: %{y + base:.3f}s<br>"
-                    "duration: %{y:.3f}s<extra></extra>"
+                    "finish: %{customdata[0]:.3f}s<br>"
+                    "duration: %{customdata[1]:.3f}s<extra></extra>"
                 ),
             )
             self.traces.append(trace)
