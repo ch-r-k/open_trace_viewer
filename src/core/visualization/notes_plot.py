@@ -1,36 +1,36 @@
-# core/visualization/notes_plot.py
+"""Notes panel helper: create annotation-only column for timestamped notes."""
+
+from typing import Dict, List, Any
+
 import plotly.graph_objects as go
-from typing import List, Dict
 
 
 class NotesPlot:
     """Creates a vertical notes panel with timestamp-aligned annotations."""
 
-    def __init__(self):
-        self.traces = []         # No traces needed — panel is annotation-based
-        self.annotations = []    # List[Dict]
+    def __init__(self) -> None:
+        self.traces: List[Any] = []  # No traces needed — panel is annotation-based
+        self.annotations: List[Dict] = []
 
-    def add_notes(self, notes, notes_col_idx: int):
+    def add_notes(self, notes: List[Dict], notes_col_idx: int) -> None:
+        """Convert a list of note dicts into Plotly annotations.
+
+        Each note should contain `Timestamp` and `Text` keys.
         """
-        notes: [{ "Text": "...", "Timestamp": ... }]
-
-        The Notes panel uses annotations only.
-        """
-
         if not notes:
             return
 
-        # annotation axis refs
         def axis_ref(axis: str, col_idx: int) -> str:
             return axis if col_idx == 1 else f"{axis}{col_idx}"
 
         xref = axis_ref("x", notes_col_idx)
         yref = axis_ref("y", notes_col_idx)
 
-        # Place annotations vertically spaced
-        for i, note in enumerate(notes):
-            ts = note["Timestamp"]
-            text = note["Text"]
+        for note in notes:
+            ts = note.get("Timestamp")
+            text = note.get("Text", "")
+            if ts is None:
+                continue
 
             ann = dict(
                 x=1,
@@ -42,12 +42,8 @@ class NotesPlot:
                 axref=xref,
                 ayref=yref,
                 showarrow=False,
-                arrowhead=3,
-                arrowsize=1,
-                arrowwidth=2,
-                arrowcolor="blue",
                 text=text,
-                standoff=0
+                standoff=0,
             )
 
             self.annotations.append(ann)

@@ -1,24 +1,35 @@
-# core/data/state_data.py
+"""State group helpers: convert lists of state dicts into pandas DataFrames.
+
+Each element of `data_states` is expected to be a list of mappings containing at
+least the keys `Task`, `time` and `State`.
+"""
+
+from typing import Dict, List
+
 import pandas as pd
-from typing import List, Dict
+
 
 class StateData:
     """Load/validate/transform state groups into a DataFrame per task."""
 
-    def __init__(self, data_states: List[List[Dict]] = None):
+    def __init__(self, data_states: List[List[Dict]] | None = None) -> None:
+        """Initialize with raw state groups.
+
+        Parameters
+        ----------
+        data_states:
+            List of state groups; each group is a list of dicts describing a
+            task's state transitions.
         """
-        data_states: list of state groups,
-        each a list of dicts like [{"Task": "A", "time": 100, "State": "IDLE"}, ...]
-        """
-        self.raw_states = data_states or []
-        self.frames = {}  # task_name -> DataFrame
+        self.raw_states: List[List[Dict]] = data_states or []
+        self.frames: Dict[str, pd.DataFrame] = {}
 
     def to_dataframes(self) -> Dict[str, pd.DataFrame]:
-        """Convert all state groups into tidy DataFrames, indexed by task name."""
-        if not self.raw_states:
-            raise ValueError("No state data provided.")
+        """Convert all state groups into tidy DataFrames, keyed by task name.
 
-        result = {}
+        Returns an empty dict if no valid groups are found (no exception).
+        """
+        result: Dict[str, pd.DataFrame] = {}
         for state_group in self.raw_states:
             if not state_group:
                 continue
@@ -31,12 +42,10 @@ class StateData:
             task_name = df["Task"].iloc[0]
             result[task_name] = df
 
-        if not result:
-            raise ValueError("No valid state groups found.")
         self.frames = result
         return result
 
-    def get_unique_tasks(self) -> list:
+    def get_unique_tasks(self) -> List[str]:
         """Return a list of task names that have state data."""
         if not self.frames:
             self.to_dataframes()
@@ -54,6 +63,6 @@ class StateData:
                 "Task": task,
                 "NumStates": len(df),
                 "UniqueStates": df["State"].nunique(),
-                "Duration": duration
+                "Duration": duration,
             })
         return pd.DataFrame(stats)
