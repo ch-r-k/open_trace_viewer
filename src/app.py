@@ -106,7 +106,9 @@ def main() -> None:
         plotter.figure_builder.select_subplots(selected)
 
     fig = plotter.plot()
-    fig.update_layout(autosize=True, margin=dict(l=20, r=20, t=50, b=50))
+    # Ensure the rendered figure doesn't allow x-axis zoom/pan interactions.
+    fig.update_layout(autosize=True, margin=dict(l=20, r=20, t=50, b=50), dragmode=False)
+    fig.update_xaxes(fixedrange=True)
     st.plotly_chart(fig, use_container_width=True)
 
 

@@ -103,7 +103,13 @@ class MultiPlotFigure:
                     existing = list(fig.layout.annotations) if fig.layout.annotations else []
                     fig.update_layout(annotations=existing + reg["annotations"])
 
-        fig.update_layout(title=self.title, width=420 * n_cols, height=600, margin=dict(t=80, l=60), dragmode="zoom", barmode="overlay")
+        # Disable interactive zoom/pan on the x-axes by fixing their range.
+        # Keep y-axis interactions (e.g., vertical zoom) enabled.
+        fig.update_layout(title=self.title, width=420 * n_cols, height=600, margin=dict(t=80, l=60), dragmode=False, barmode="overlay")
+
+        # Ensure every x-axis is fixed (no zoom/pan). This applies to all
+        # subplots' x-axes created by make_subplots.
+        fig.update_xaxes(fixedrange=True)
 
         return fig
 
