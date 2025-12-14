@@ -109,7 +109,14 @@ def main() -> None:
     # Ensure the rendered figure doesn't allow x-axis zoom/pan interactions.
     fig.update_layout(autosize=True, margin=dict(l=20, r=20, t=50, b=50), dragmode=False)
     fig.update_xaxes(fixedrange=True)
-    st.plotly_chart(fig, use_container_width=True)
+
+    # Enable scroll-wheel interaction for the plot. With `scrollZoom=True`
+    # Plotly will use the mouse wheel to zoom the figure. Because x-axes
+    # are fixed (`fixedrange=True`), the wheel will effectively zoom the
+    # y-axis (time) allowing you to 'scroll' through the timeline when
+    # the cursor is over the plot.
+    config = {"scrollZoom": True, "displayModeBar": True}
+    st.plotly_chart(fig, use_container_width=True, config=config)
 
 
 if __name__ == "__main__":
