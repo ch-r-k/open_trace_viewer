@@ -17,6 +17,20 @@ class MultiPlotFigure:
         self.shared_yaxes = shared_yaxes
         self._registered: List[Dict[str, Any]] = []  # list of dicts: {kind, data, title}
 
+    def get_subplot_titles(self) -> List[str]:
+        """Return the current registered subplot titles in order."""
+        return [r["title"] for r in self._registered]
+
+    def select_subplots(self, titles: List[str]) -> None:
+        """Keep only registered subplots whose title is present in `titles`.
+
+        If `titles` is empty or None, no filtering is applied.
+        """
+        if not titles:
+            return
+
+        self._registered = [r for r in self._registered if r["title"] in titles]
+
     def add_metric_subplot(self, title: str, df: Any, x_col: str = "x", y_col: str = "y", plot_type: str = "line") -> None:
         self._registered.append(
             {

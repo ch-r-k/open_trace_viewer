@@ -85,6 +85,26 @@ def main() -> None:
 
     add_state_groups_to_plotter(plotter, data.get("states", []))
 
+    # --- Subplot selection UI ---
+    try:
+        titles = plotter.figure_builder.get_subplot_titles()
+    except Exception:
+        titles = []
+
+    selected = []
+    if titles:
+        st.sidebar.markdown("### Subplots")
+        for t in titles:
+            if st.sidebar.checkbox(t, value=True):
+                selected.append(t)
+
+        if not selected:
+            st.sidebar.warning("Select at least one subplot to display.")
+            return
+
+        # keep only the selected subplot registrations
+        plotter.figure_builder.select_subplots(selected)
+
     fig = plotter.plot()
     fig.update_layout(autosize=True, margin=dict(l=20, r=20, t=50, b=50))
     st.plotly_chart(fig, use_container_width=True)
